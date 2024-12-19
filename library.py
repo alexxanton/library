@@ -12,9 +12,14 @@ color = NORMAL_COLOR
 library = {
     1: {"title": "Python for everyone", "author": "John Doe", "quantity": 3},
     2: {"title": "Data and Structures", "author": "Anna Smith", "quantity": 5},
-    3: {"title": "Introduction to OOP", "author": "Joan Costa", "quantity": 2},
-    4: {"title": "Introduction to OOP", "author": "Joan Costa", "quantity": 2},
-    5: {"title": "Introduction to OOP", "author": "Joan Costa", "quantity": 2},
+    3: {"title": "Introduction to OOP", "author": "Misco Jones", "quantity": 2},
+    4: {"title": "Advanced Python", "author": "Jane Doe", "quantity": 4},
+    5: {"title": "Machine Learning Basics", "author": "Tom Brown", "quantity": 6},
+    6: {"title": "Deep Learning with Python", "author": "Sara White", "quantity": 3},
+    7: {"title": "Data Science Handbook", "author": "Emily Davis", "quantity": 5},
+    8: {"title": "Artificial Intelligence", "author": "Michael Green", "quantity": 2},
+    9: {"title": "Python for Data Analysis", "author": "Laura Black", "quantity": 7},
+    10: {"title": "Statistics for Data Science", "author": "Robert Gray", "quantity": 4}
 }
 
 
@@ -59,29 +64,43 @@ def main(stdscr):
     def showBooks():
         text = []
         for book in library:
-            text.append(f"ID: {book}\n")
+            text.append(f"ID: {book}")
             for item in library[book]:
-                text.append(f"{item.capitalize()}: {library[book][item]}\n")
-            text.append("\n")
-        
+                text.append(f"{item.capitalize()}: {library[book][item]}")
+            text.append("")
+
         index = 0
+        longest_line = len(max(text, key=len))
+
+        # Enable mouse support
+        curses.mousemask(curses.ALL_MOUSE_EVENTS)
+
         while True:
             stdscr.move(7, 0)
+            stdscr.addstr("╔" + "═" * longest_line + "╗\n")
             for line in range(index, len(text), 1):
-                stdscr.addstr(text[line])
+                stdscr.addstr(f"║{text[line]}" + " " * (longest_line - len(text[line])) + "║\n")
                 if stdscr.getyx()[0] + 4 > stdscr.getmaxyx()[0]:
                     break
-            
-            match stdscr.getch():
-                case 10:
-                    break
-                case 258:
-                    index += 1 if index < len(text) else 0
-                case 259:
+            stdscr.addstr("╚" + "═" * longest_line + "╝\n")
+
+            stdscr.refresh()
+
+            # Handle user input
+            key = stdscr.getch()
+            if key == 10:  # Enter key
+                break
+            elif key == curses.KEY_MOUSE:  # Mouse event
+                id, x, y, z, bstate = curses.getmouse()
+                if bstate & curses.BUTTON4_PRESSED:  # Scroll up
                     index -= 1 if index > 0 else 0
+                elif bstate & curses.BUTTON5_PRESSED:  # Scroll down
+                    index += 1 if index + stdscr.getmaxyx()[0] - 10 < len(text) else 0
+                elif curses.BUTTON1_PRESSED:  # Scroll down
+                    stdscr.addstr(f"{y}")
 
-        stdscr.refresh()
 
+            stdscr.addstr(f"{index}")
 
 
     def borrowBook():
