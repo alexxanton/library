@@ -1,4 +1,5 @@
 import curses
+import math
 
 NORMAL_COLOR = 0
 SELECTED_COLOR = 1
@@ -97,10 +98,10 @@ def main(stdscr):
                 elif bstate & curses.BUTTON5_PRESSED:  # Scroll down
                     index += 1 if index + stdscr.getmaxyx()[0] - 10 < len(text) else 0
                 elif curses.BUTTON1_PRESSED:  # Scroll down
-                    stdscr.addstr(f"{y}")
+                    stdscr.addstr(f"{math.floor(y / 5)}")
+                    stdscr.clrtoeol()
 
 
-            stdscr.addstr(f"{index}")
 
 
     def borrowBook():
