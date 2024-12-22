@@ -4,10 +4,8 @@ import math
 NORMAL_COLOR = 0
 SELECTED_COLOR = 1
 ERROR_COLOR = 2
-START_MSG = "\nPress the key for the action you want to do.\n"
 
-key = ""
-output = START_MSG
+selected = 0
 color = NORMAL_COLOR
 
 library = {
@@ -34,7 +32,7 @@ def main(stdscr):
         user_input = ""
         valid = False
         while not user_input or not valid:
-            stdscr.move(7, 0)
+            stdscr.move(0, 0)
             stdscr.addstr(msg)
             stdscr.clrtoeol()
             stdscr.refresh()
@@ -62,7 +60,8 @@ def main(stdscr):
         pass
 
 
-    def showBooks():
+    def displayBooks():
+        global selected
         text = []
         for book in library:
             text.append(f"ID: {book}")
@@ -70,18 +69,24 @@ def main(stdscr):
                 text.append(f"{item.capitalize()}: {library[book][item]}")
             text.append("")
 
-        index = 0
+        scroll = 0
         longest_line = len(max(text, key=len))
+        screen_height = stdscr.getmaxyx()[0]
 
         # Enable mouse support
         curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
         while True:
-            stdscr.move(7, 0)
+            stdscr.move(0, 0)
             stdscr.addstr("╔" + "═" * longest_line + "╗\n")
-            for line in range(index, len(text), 1):
-                stdscr.addstr(f"║{text[line]}" + " " * (longest_line - len(text[line])) + "║\n")
-                if stdscr.getyx()[0] + 4 > stdscr.getmaxyx()[0]:
+            for line in range(scroll, len(text), 1):
+                line_to_print = f"{text[line]}" + " " * (longest_line - len(text[line]))
+                stdscr.addstr("║")
+                color = SELECTED_COLOR if math.ceil((line + 1) / 5) == selected else NORMAL_COLOR
+                stdscr.addstr(line_to_print, curses.color_pair(color))
+                color = NORMAL_COLOR
+                stdscr.addstr("║\n")
+                if stdscr.getyx()[0] + 4 > screen_height:
                     break
             stdscr.addstr("╚" + "═" * longest_line + "╝\n")
 
@@ -94,14 +99,17 @@ def main(stdscr):
             elif key == curses.KEY_MOUSE:  # Mouse event
                 id, x, y, z, bstate = curses.getmouse()
                 if bstate & curses.BUTTON4_PRESSED:  # Scroll up
-                    index -= 1 if index > 0 else 0
+                    scroll -= 1 if scroll > 0 else 0
                 elif bstate & curses.BUTTON5_PRESSED:  # Scroll down
-                    index += 1 if index + stdscr.getmaxyx()[0] - 10 < len(text) else 0
+                    scroll += 1 if scroll + screen_height - 4 < len(text) else 0
                 elif curses.BUTTON1_PRESSED:  # Scroll down
-                    stdscr.addstr(f"{math.floor(y / 5)}")
+                    selected = math.ceil((y + scroll) / 5)
+                    stdscr.addstr(f"{selected}")
                     stdscr.clrtoeol()
 
-
+    
+    while True:
+        displayBooks()
 
 
     def borrowBook():
@@ -112,48 +120,5 @@ def main(stdscr):
         stdscr.addstr("Exiting the menu...\n")
         stdscr.refresh()
 
-
-    options = {
-        "1": {"desc": "Add a new book\n", "func": addBook},
-        "2": {"desc": "Search for a book\n", "func": searchBook},
-        "3": {"desc": "Show all books\n", "func": showBooks},
-        "4": {"desc": "Borrow a book\n", "func": borrowBook},
-        "5": {"desc": "Exit\n", "func": exit}
-    }
-    
-
-    def get_option():
-        global key, output, color
-        stdscr.clear()
-
-        for opt in options:
-            stdscr.addstr(f"{opt}. ", curses.color_pair(1))
-            stdscr.addstr(f"{options[opt]['desc']}")
-        stdscr.addstr(output, curses.color_pair(color))
-
-        if key in options:
-            options[key]["func"]()
-            key = ""
-            output = START_MSG
-            color = NORMAL_COLOR
-            stdscr.addstr("Press enter to continue...")
-            while True:
-                if stdscr.getch() == 10:
-                    break
-            return
-
-        key = chr(stdscr.getch())
-        if key in options:
-            output = f"\n{options[key]['desc']}"
-            color = SELECTED_COLOR
-        else:
-            output = "\nInvalid option\n"
-            color = ERROR_COLOR
-
-        stdscr.refresh()
-
-
-    while True:
-        get_option()
 
 curses.wrapper(main)
