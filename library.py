@@ -7,6 +7,11 @@ ERROR_COLOR = 2
 
 selected = 0
 color = NORMAL_COLOR
+scroll = 0
+longest_line = 10
+text = []
+screen_height = 0
+
 
 library = {
     1: {"title": "Python for everyone", "author": "John Doe", "quantity": 3},
@@ -55,7 +60,57 @@ def searchBook():
 
 
 def displayBooks(stdscr):
-    global selected
+    global selected, text, scroll, longest_line, screen_height
+    stdscr.move(0, 0)
+    stdscr.addstr("╔" + "═" * longest_line + "╗\n")
+
+    for line in range(scroll, len(text), 1):
+        line_to_print = f"{text[line]}" + " " * (longest_line - len(text[line]))
+        stdscr.addstr("║")
+        color = SELECTED_COLOR if math.ceil((line + 1) / 5) == selected else NORMAL_COLOR
+        stdscr.addstr(line_to_print, curses.color_pair(color))
+        color = NORMAL_COLOR
+        stdscr.addstr("║\n")
+        if stdscr.getyx()[0] + 4 > screen_height:
+            break
+
+    stdscr.addstr("╚" + "═" * longest_line + "╝\n")
+
+
+def displayOptionPanel(stdscr):
+    options = ["add", "search", "borrow"]
+    xpos = longest_line + 2
+    ypos = 0
+    width = stdscr.getmaxyx()[1] - (longest_line + 5)
+    stdscr.move(ypos, xpos)
+    stdscr.addstr("╔" + "═" * width + "╗")
+    for item in options:
+        ypos += 1
+        stdscr.move(ypos, xpos)
+        stdscr.addstr("║" + item + " " * (width - len(item)) + "║")
+    stdscr.move(ypos + 1, xpos)
+    stdscr.addstr("╚" + "═" * width + "╝")
+    
+
+def handleUserInput(stdscr):
+    global scroll, selected
+    key = stdscr.getch()
+    if key == 10:  # Enter key
+        return
+    elif key == curses.KEY_MOUSE:
+        id, x, y, z, bstate = curses.getmouse()
+        if bstate & curses.BUTTON4_PRESSED:
+            scroll -= 1 if scroll > 0 else 0
+        elif bstate & curses.BUTTON5_PRESSED:
+            scroll += 1 if scroll + screen_height - 4 < len(text) else 0
+        elif curses.BUTTON1_PRESSED:
+            selected = math.ceil((y + scroll) / 5)
+            stdscr.addstr(f"{selected}")
+            stdscr.clrtoeol()
+
+
+def display(stdscr):
+    global text, longest_line, screen_height
     text = []
     for book in library:
         text.append(f"ID: {book}")
@@ -63,7 +118,6 @@ def displayBooks(stdscr):
             text.append(f"{item.capitalize()}: {library[book][item]}")
         text.append("")
 
-    scroll = 0
     longest_line = len(max(text, key=len))
     screen_height = stdscr.getmaxyx()[0]
 
@@ -71,35 +125,9 @@ def displayBooks(stdscr):
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
     while True:
-        stdscr.move(0, 0)
-        stdscr.addstr("╔" + "═" * longest_line + "╗\n")
-        for line in range(scroll, len(text), 1):
-            line_to_print = f"{text[line]}" + " " * (longest_line - len(text[line]))
-            stdscr.addstr("║")
-            color = SELECTED_COLOR if math.ceil((line + 1) / 5) == selected else NORMAL_COLOR
-            stdscr.addstr(line_to_print, curses.color_pair(color))
-            color = NORMAL_COLOR
-            stdscr.addstr("║\n")
-            if stdscr.getyx()[0] + 4 > screen_height:
-                break
-        stdscr.addstr("╚" + "═" * longest_line + "╝\n")
-
-        stdscr.refresh()
-
-        # Handle user input
-        key = stdscr.getch()
-        if key == 10:  # Enter key
-            break
-        elif key == curses.KEY_MOUSE:  # Mouse event
-            id, x, y, z, bstate = curses.getmouse()
-            if bstate & curses.BUTTON4_PRESSED:  # Scroll up
-                scroll -= 1 if scroll > 0 else 0
-            elif bstate & curses.BUTTON5_PRESSED:  # Scroll down
-                scroll += 1 if scroll + screen_height - 4 < len(text) else 0
-            elif curses.BUTTON1_PRESSED:  # Scroll down
-                selected = math.ceil((y + scroll) / 5)
-                stdscr.addstr(f"{selected}")
-                stdscr.clrtoeol()
+        displayBooks(stdscr)
+        displayOptionPanel(stdscr)
+        handleUserInput(stdscr)
 
 
     def borrowBook():

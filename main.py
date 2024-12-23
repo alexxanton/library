@@ -1,5 +1,5 @@
 import curses
-from library import displayBooks
+from library import display
 
 def main(stdscr):
     curses.start_color()
@@ -7,6 +7,6 @@ def main(stdscr):
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
 
     while True:
-        displayBooks(stdscr)
+        display(stdscr)
 
 curses.wrapper(main)
