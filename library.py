@@ -5,6 +5,8 @@ NORMAL_COLOR = 0
 SELECTED_COLOR = 1
 ERROR_COLOR = 2
 
+OPTIONS_MIN_WIDTH = 10
+
 selected = 0
 color = NORMAL_COLOR
 scroll = 0
@@ -78,7 +80,7 @@ def displayBooks(stdscr):
 
 
 def displayOptionPanel(stdscr):
-    options = ["add", "search", "borrow"]
+    options = ["➕ Add", "🔎 Search", "❌ Exit"]
     xpos = longest_line + 2
     ypos = 0
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
@@ -87,13 +89,13 @@ def displayOptionPanel(stdscr):
     for item in options:
         ypos += 1
         stdscr.move(ypos, xpos)
-        stdscr.addstr("║" + item + " " * (width - len(item)) + "║")
+        stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
     stdscr.addstr("╚" + "═" * width + "╝")
     
 
 def handleUserInput(stdscr):
-    global scroll, selected
+    global scroll, selected, screen_height
     key = stdscr.getch()
     if key == 10:  # Enter key
         return
@@ -107,6 +109,9 @@ def handleUserInput(stdscr):
             selected = math.ceil((y + scroll) / 5)
             stdscr.addstr(f"{selected}")
             stdscr.clrtoeol()
+    stdscr.clrtobot()
+    screen_height = stdscr.getmaxyx()[0]
+    
 
 
 def display(stdscr):
