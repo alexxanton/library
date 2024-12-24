@@ -130,8 +130,11 @@ def display(stdscr):
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
     while True:
+        max_scroll = len(text) - screen_height + 4
+        scroll_pct = int((scroll / max_scroll) * 100)
         displayBooks(stdscr)
         displayOptionPanel(stdscr)
+        stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 1)
         handleUserInput(stdscr)
 
 
