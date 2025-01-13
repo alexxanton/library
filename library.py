@@ -4,8 +4,7 @@ import math
 NORMAL_COLOR = 0
 SELECTED_COLOR = 1
 ERROR_COLOR = 2
-
-OPTIONS_MIN_WIDTH = 10
+OPTIONS_MAX_WIDTH = 40
 
 selected = 0
 color = NORMAL_COLOR
@@ -13,9 +12,11 @@ scroll = 0
 longest_line = 10
 text = []
 screen_height = 0
+run = True
+option = 0
 
 
-library = {
+books = {
     1: {"title": "Python for everyone", "author": "John Doe", "quantity": 3},
     2: {"title": "Data and Structures", "author": "Anna Smith", "quantity": 5},
     3: {"title": "Introduction to OOP", "author": "Misco Jones", "quantity": 2},
@@ -33,7 +34,7 @@ def get_input(stdscr, msg, validator="str"):
     user_input = ""
     valid = False
     while not user_input or not valid:
-        stdscr.move(0, 0)
+        stdscr.move(stdscr.getmaxyx()[0] // 2 + 1, 0)
         stdscr.addstr(msg)
         stdscr.clrtoeol()
         stdscr.refresh()
@@ -47,18 +48,44 @@ def get_input(stdscr, msg, validator="str"):
 
 
 def addBook(stdscr):
-    id = len(library) + 1
-    title = get_input("Enter the title: ")
-    author = get_input("Enter the author: ")
-    quantity = get_input("Enter the quantity: ", "int")
+    id = len(books) + 1
+    title = get_input(stdscr, "Enter the title: ")
+    author = get_input(stdscr, "Enter the author: ")
+    quantity = get_input(stdscr, "Enter the quantity: ", "int")
     
-    library.update({id: {"title": title, "author": author, "quantity": int(quantity)}})
-    stdscr.addstr(f"\nBook added successfully\n")
+    books.update({id: {"title": title, "author": author, "quantity": int(quantity)}})
+    stdscr.addstr(f"\nBook added successfully (Press enter)\n")
     stdscr.refresh()
 
 
-def searchBook():
-    pass
+def search(strings, query):
+    # Normalize the input
+    query = query.lower().split()  # Split query into keywords
+    results = []
+
+    for string in strings:
+        string_lower = string.lower()
+        # Check if all query parts are in the string in order
+        current_index = 0
+        match = True
+
+        for word in query:
+            current_index = string_lower.find(word, current_index)
+            if current_index == -1:  # Word not found
+                match = False
+                break
+            current_index += len(word)  # Move index forward to maintain order
+
+        if match:
+            results.append(string)
+
+    return results
+
+
+search_query = "py everyone"
+matches = search(books, search_query)
+print(matches)
+
 
 
 def displayBooks(stdscr):
@@ -67,7 +94,7 @@ def displayBooks(stdscr):
     stdscr.addstr("╔" + "═" * longest_line + "╗\n")
 
     for line in range(scroll, len(text), 1):
-        line_to_print = f"{text[line]}" + " " * (longest_line - len(text[line]))
+        line_to_print = f"{text[line][0:longest_line:1]}" + " " * (longest_line - len(text[line]))
         stdscr.addstr("║")
         color = SELECTED_COLOR if math.ceil((line + 1) / 5) == selected else NORMAL_COLOR
         stdscr.addstr(line_to_print, curses.color_pair(color))
@@ -92,10 +119,50 @@ def displayOptionPanel(stdscr):
         stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
     stdscr.addstr("╚" + "═" * width + "╝")
+
+
+def displayInputField(stdscr):
+    global option
+    width = stdscr.getmaxyx()[1] - (longest_line + 5)
+    height = stdscr.getmaxyx()[0]
+    stdscr.move(5, longest_line + 2)
+    stdscr.addstr("╔" + "═" * width + "╗\n")
+    for x in range(6, height - 3, 1):
+        stdscr.move(x, longest_line + 2)
+        stdscr.addstr("║" + " " * width + "║\n")
+    stdscr.move(height - 3, longest_line + 2)
+    stdscr.addstr("╚" + "═" * width + "╝")
+    if option == 1:
+        curses.curs_set(2)
+        stdscr.move(height // 2, 0)
+        stdscr.addstr("═" * width)
+        stdscr.clrtobot()
+        addBook(stdscr)
+    curses.curs_set(1)
+    option = 0
+
+
+def placeScrollIndicator(stdscr):
+    max_scroll = len(text) - screen_height + 4
+    scroll_pct = int((scroll / max_scroll) * 100)
+    stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 1)
     
 
+def handleClick(stdscr, x, y):
+    global selected, option, run
+    if x <= longest_line:
+        selected = math.ceil((y + scroll) / 5)
+        stdscr.addstr(f"{selected}")
+        stdscr.clrtoeol()
+    else:
+        if y > 0 and y < 3:
+            option = y
+        elif y == 3:
+            run = False
+
+
 def handleUserInput(stdscr):
-    global scroll, selected, screen_height
+    global scroll, selected, screen_height, run
     key = stdscr.getch()
     if key == 10:  # Enter key
         return
@@ -106,9 +173,7 @@ def handleUserInput(stdscr):
         elif bstate & curses.BUTTON5_PRESSED:
             scroll += 1 if scroll + screen_height - 4 < len(text) else 0
         elif curses.BUTTON1_PRESSED:
-            selected = math.ceil((y + scroll) / 5)
-            stdscr.addstr(f"{selected}")
-            stdscr.clrtoeol()
+            handleClick(stdscr, x, y)
     stdscr.clrtobot()
     screen_height = stdscr.getmaxyx()[0]
     
@@ -117,24 +182,25 @@ def handleUserInput(stdscr):
 def display(stdscr):
     global text, longest_line, screen_height
     text = []
-    for book in library:
+    for book in books:
         text.append(f"ID: {book}")
-        for item in library[book]:
-            text.append(f"{item.capitalize()}: {library[book][item]}")
+        for item in books[book]:
+            text.append(f"{item.capitalize()}: {books[book][item]}")
         text.append("")
 
     longest_line = len(max(text, key=len))
+    if longest_line > OPTIONS_MAX_WIDTH:
+        longest_line = OPTIONS_MAX_WIDTH
     screen_height = stdscr.getmaxyx()[0]
 
     # Enable mouse support
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
-    while True:
-        max_scroll = len(text) - screen_height + 4
-        scroll_pct = int((scroll / max_scroll) * 100)
+    while run:
         displayBooks(stdscr)
         displayOptionPanel(stdscr)
-        stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 1)
+        displayInputField(stdscr)
+        placeScrollIndicator(stdscr)
         handleUserInput(stdscr)
 
 
