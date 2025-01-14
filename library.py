@@ -60,14 +60,14 @@ def addBook(stdscr):
     run = False
 
 
-def search(strings, query):
+def search(books, query):
     # Normalize the input
     query = query.lower().split()  # Split query into keywords
     results = []
 
-    for string in strings:
-        string_lower = string.lower()
-        # Check if all query parts are in the string in order
+    for item in range(1, len(books), 1):
+        string_lower = books[item]["title"].lower()
+        # Check if all query parts are in the book in order
         current_index = 0
         match = True
 
@@ -79,15 +79,9 @@ def search(strings, query):
             current_index += len(word)  # Move index forward to maintain order
 
         if match:
-            results.append(string)
+            results.append(books[item]["title"])
 
     return results
-
-
-# search_query = "py everyone"
-# matches = search(books, search_query)
-# print(matches)
-
 
 
 def displayBooks(stdscr):
@@ -124,8 +118,7 @@ def displayOptionPanel(stdscr):
 
 
 def displayBookOptions(stdscr):
-    global option
-    options = ["➕ Borrow", "➖ Return"]
+    options = ["➖ Borrow", "➕ Return"]
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     height = stdscr.getmaxyx()[0]
     stdscr.move(5, longest_line + 2)
@@ -151,12 +144,21 @@ def placeScrollbar(stdscr):
     
 
 def handleClick(stdscr, x, y):
-    global selected, option, run
+    global selected, option, run, books
     if x <= longest_line:
         selected = math.ceil((y + scroll) / 5)
         stdscr.addstr(f"{selected}")
         stdscr.clrtoeol()
     else:
+        if selected > 0:
+            run = False
+            if y == 5 and books[selected]["quantity"] > 0:
+                books[selected]["quantity"] -= 1
+            elif y == 6:
+                books[selected]["quantity"] += 1
+            else:
+                run = True
+
         if y > 0 and y < 3:
             option = y
         elif y == 3:
@@ -178,11 +180,16 @@ def handleUserInput(stdscr):
             handleClick(stdscr, x, y)
     stdscr.clrtobot()
     screen_height = stdscr.getmaxyx()[0]
+
+
+def displayMenu(stdscr):
+    displayBooks(stdscr)
+    displayOptionPanel(stdscr)
+    displayBookOptions(stdscr)
     
 
-
-def display(stdscr):
-    global text, longest_line, screen_height, run
+def displayLibrary(stdscr):
+    global text, longest_line, screen_height, run, option
     run = True
     text = []
     for book in books:
@@ -200,24 +207,17 @@ def display(stdscr):
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
     while run:
-        displayBooks(stdscr)
-        displayOptionPanel(stdscr)
-        displayBookOptions(stdscr)
+        displayMenu(stdscr)
         if option > 0 and option < 3:
             curses.curs_set(2)
             stdscr.move(0, 0)
             stdscr.clrtobot()
-            addBook(stdscr)
-        curses.curs_set(1)
-        option = 0
+            if option == 1:
+                addBook(stdscr)
+            else:
+                search(books, get_input(stdscr, "Search: "))
+            option = 0
+            curses.curs_set(1)
+            displayMenu(stdscr)
         placeScrollbar(stdscr)
         handleUserInput(stdscr)
-
-
-    def borrowBook():
-        pass
-
-
-    def exit():
-        stdscr.addstr("Exiting the menu...\n")
-        stdscr.refresh()
