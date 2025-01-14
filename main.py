@@ -7,6 +7,7 @@ def main(stdscr):
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.curs_set(1)
 
-    display(stdscr)
+    while True:
+        display(stdscr)
 
 curses.wrapper(main)

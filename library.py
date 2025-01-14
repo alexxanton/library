@@ -1,5 +1,6 @@
 import curses
 import math
+import sys
 
 NORMAL_COLOR = 0
 SELECTED_COLOR = 1
@@ -34,7 +35,7 @@ def get_input(stdscr, msg, validator="str"):
     user_input = ""
     valid = False
     while not user_input or not valid:
-        stdscr.move(stdscr.getmaxyx()[0] // 2 + 1, 0)
+        stdscr.move(0, 0)
         stdscr.addstr(msg)
         stdscr.clrtoeol()
         stdscr.refresh()
@@ -48,14 +49,15 @@ def get_input(stdscr, msg, validator="str"):
 
 
 def addBook(stdscr):
+    global run
     id = len(books) + 1
     title = get_input(stdscr, "Enter the title: ")
     author = get_input(stdscr, "Enter the author: ")
     quantity = get_input(stdscr, "Enter the quantity: ", "int")
     
     books.update({id: {"title": title, "author": author, "quantity": int(quantity)}})
-    stdscr.addstr(f"\nBook added successfully (Press enter)\n")
     stdscr.refresh()
+    run = False
 
 
 def search(strings, query):
@@ -82,16 +84,16 @@ def search(strings, query):
     return results
 
 
-search_query = "py everyone"
-matches = search(books, search_query)
-print(matches)
+# search_query = "py everyone"
+# matches = search(books, search_query)
+# print(matches)
 
 
 
 def displayBooks(stdscr):
     global selected, text, scroll, longest_line, screen_height
     stdscr.move(0, 0)
-    stdscr.addstr("╔" + "═" * longest_line + "╗\n")
+    stdscr.addstr("╔" + "═" * longest_line + "╦\n")
 
     for line in range(scroll, len(text), 1):
         line_to_print = f"{text[line][0:longest_line:1]}" + " " * (longest_line - len(text[line]))
@@ -103,7 +105,7 @@ def displayBooks(stdscr):
         if stdscr.getyx()[0] + 4 > screen_height:
             break
 
-    stdscr.addstr("╚" + "═" * longest_line + "╝\n")
+    stdscr.addstr("╚" + "═" * longest_line + "╩\n")
 
 
 def displayOptionPanel(stdscr):
@@ -112,40 +114,40 @@ def displayOptionPanel(stdscr):
     ypos = 0
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     stdscr.move(ypos, xpos)
-    stdscr.addstr("╔" + "═" * width + "╗")
+    stdscr.addstr("╦" + "═" * width + "╗")
     for item in options:
         ypos += 1
         stdscr.move(ypos, xpos)
         stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
-    stdscr.addstr("╚" + "═" * width + "╝")
+    stdscr.addstr("╠" + "═" * width + "╣")
 
 
-def displayInputField(stdscr):
+def displayBookOptions(stdscr):
     global option
+    options = ["➕ Borrow", "➖ Return"]
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     height = stdscr.getmaxyx()[0]
     stdscr.move(5, longest_line + 2)
-    stdscr.addstr("╔" + "═" * width + "╗\n")
-    for x in range(6, height - 3, 1):
-        stdscr.move(x, longest_line + 2)
+    stdscr.addstr("║" + " " * width + "║")
+
+    for y in range(6, height - 3, 1):
+        stdscr.move(y, longest_line + 2)
         stdscr.addstr("║" + " " * width + "║\n")
+
+    if selected > 0 and selected <= len(books):
+        for i in range(2):
+            stdscr.move(5 + i, longest_line + 2)
+            stdscr.addstr("║" + options[i])
+
     stdscr.move(height - 3, longest_line + 2)
-    stdscr.addstr("╚" + "═" * width + "╝")
-    if option == 1:
-        curses.curs_set(2)
-        stdscr.move(height // 2, 0)
-        stdscr.addstr("═" * width)
-        stdscr.clrtobot()
-        addBook(stdscr)
-    curses.curs_set(1)
-    option = 0
+    stdscr.addstr("╩" + "═" * width + "╝")
 
 
-def placeScrollIndicator(stdscr):
+def placeScrollbar(stdscr):
     max_scroll = len(text) - screen_height + 4
     scroll_pct = int((scroll / max_scroll) * 100)
-    stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 1)
+    stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 2)
     
 
 def handleClick(stdscr, x, y):
@@ -158,7 +160,7 @@ def handleClick(stdscr, x, y):
         if y > 0 and y < 3:
             option = y
         elif y == 3:
-            run = False
+            sys.exit()
 
 
 def handleUserInput(stdscr):
@@ -180,7 +182,8 @@ def handleUserInput(stdscr):
 
 
 def display(stdscr):
-    global text, longest_line, screen_height
+    global text, longest_line, screen_height, run
+    run = True
     text = []
     for book in books:
         text.append(f"ID: {book}")
@@ -199,8 +202,15 @@ def display(stdscr):
     while run:
         displayBooks(stdscr)
         displayOptionPanel(stdscr)
-        displayInputField(stdscr)
-        placeScrollIndicator(stdscr)
+        displayBookOptions(stdscr)
+        if option > 0 and option < 3:
+            curses.curs_set(2)
+            stdscr.move(0, 0)
+            stdscr.clrtobot()
+            addBook(stdscr)
+        curses.curs_set(1)
+        option = 0
+        placeScrollbar(stdscr)
         handleUserInput(stdscr)
 
 
