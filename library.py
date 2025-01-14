@@ -6,6 +6,7 @@ NORMAL_COLOR = 0
 SELECTED_COLOR = 1
 ERROR_COLOR = 2
 OPTIONS_MAX_WIDTH = 40
+MIN_HEIGHT = 8
 
 selected = 0
 color = NORMAL_COLOR
@@ -111,7 +112,7 @@ def displayBooks(stdscr):
 
 
 def displayOptionPanel(stdscr):
-    options = ["➕ Add", "🔎 Search", "❌ Exit"]
+    options = ["➕ New", "🔎 Search", "❌ Exit"]
     xpos = longest_line + 2
     ypos = 0
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
@@ -128,7 +129,7 @@ def displayOptionPanel(stdscr):
 
 
 def displayBookOptions(stdscr):
-    options = ["➖ Borrow", "➕ Return"]
+    options = ["➕ Add", "➖ Remove"]
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     height = stdscr.getmaxyx()[0]
     if height > len(text):
@@ -156,7 +157,10 @@ def placeScrollbar(stdscr):
         return
     
     max_scroll = len(text) - screen_height + 4
-    scroll_pct = int((scroll / max_scroll) * 100)
+    try:
+        scroll_pct = int((scroll / max_scroll) * 100)
+    except:
+        scroll_pct = 0
     stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 2)
     
 
@@ -169,10 +173,12 @@ def handleClick(stdscr, x, y):
     else:
         if selected > 0:
             run = False
-            if y == 5 and books[selected]["quantity"] > 0:
-                books[selected]["quantity"] -= 1
-            elif y == 6:
-                books[selected]["quantity"] += 1
+            key = list(searchResults.keys())[selected - 1] if searchResults else selected
+
+            if y == 5:
+                books[key]["quantity"] += 1
+            elif y == 6 and books[key]["quantity"] > 0:
+                books[key]["quantity"] -= 1
             else:
                 run = True
 
@@ -182,11 +188,32 @@ def handleClick(stdscr, x, y):
             sys.exit()
 
 
+def handleOptions(stdscr):
+    global searchResults, searchMode, run, option
+    if option > 0 and option < 3:
+        curses.curs_set(2)
+        stdscr.move(0, 0)
+        stdscr.clrtobot()
+        if option == 1:
+            addBook(stdscr)
+        else:
+            if not searchResults:
+                searchResults = search(books, get_input(stdscr, "Search: "))
+            else:
+                searchResults = {}
+                searchMode = True
+                run = False
+        option = 0
+        curses.curs_set(1)
+        displayMenu(stdscr)
+
+
 def handleUserInput(stdscr):
     global scroll, selected, screen_height, run, searchMode
 
     if searchMode:
         searchMode = False
+        selected = 0
         return
     
     key = stdscr.getch()
@@ -208,6 +235,7 @@ def displayMenu(stdscr):
     displayBooks(stdscr)
     displayOptionPanel(stdscr)
     displayBookOptions(stdscr)
+    stdscr.clrtobot()
     
 
 def displayLibrary(stdscr):
@@ -220,7 +248,10 @@ def displayLibrary(stdscr):
         text.append(f"ID: {book}")
         for item in booksToShow[book]:
             text.append(f"{item.capitalize()}: {booksToShow[book][item]}")
+
         text.append("")
+        if len(searchResults) == 1:
+            text.append("")  # Append an extra space to cover up left out space
 
     longest_line = len(max(text, key=len))
     if longest_line > OPTIONS_MAX_WIDTH:
@@ -232,21 +263,6 @@ def displayLibrary(stdscr):
 
     while run:
         displayMenu(stdscr)
-        if option > 0 and option < 3:
-            curses.curs_set(2)
-            stdscr.move(0, 0)
-            stdscr.clrtobot()
-            if option == 1:
-                addBook(stdscr)
-            else:
-                if not searchResults:
-                    searchResults = search(books, get_input(stdscr, "Search: "))
-                else:
-                    searchResults = {}
-                    searchMode = True
-                    run = False
-            option = 0
-            curses.curs_set(1)
-            displayMenu(stdscr)
+        handleOptions(stdscr)
         placeScrollbar(stdscr)
         handleUserInput(stdscr)
