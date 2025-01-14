@@ -15,6 +15,8 @@ text = []
 screen_height = 0
 run = True
 option = 0
+searchMode = False
+searchResults = {}
 
 
 books = {
@@ -61,9 +63,11 @@ def addBook(stdscr):
 
 
 def search(books, query):
+    global searchMode, run
+
     # Normalize the input
     query = query.lower().split()  # Split query into keywords
-    results = []
+    results = {}
 
     for item in range(1, len(books), 1):
         string_lower = books[item]["title"].lower()
@@ -79,7 +83,11 @@ def search(books, query):
             current_index += len(word)  # Move index forward to maintain order
 
         if match:
-            results.append(books[item]["title"])
+            results[item] = books[item]
+
+    if len(results) > 0:
+        searchMode = True
+        run = False
 
     return results
 
@@ -112,6 +120,8 @@ def displayOptionPanel(stdscr):
     for item in options:
         ypos += 1
         stdscr.move(ypos, xpos)
+        if searchResults and ypos == 2:
+            item = "📋 All"
         stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
     stdscr.addstr("╠" + "═" * width + "╣")
@@ -121,6 +131,8 @@ def displayBookOptions(stdscr):
     options = ["➖ Borrow", "➕ Return"]
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     height = stdscr.getmaxyx()[0]
+    if height > len(text):
+        height = len(text) + 4
     stdscr.move(5, longest_line + 2)
     stdscr.addstr("║" + " " * width + "║")
 
@@ -138,6 +150,11 @@ def displayBookOptions(stdscr):
 
 
 def placeScrollbar(stdscr):
+    global scroll
+    if searchMode:
+        scroll = 0
+        return
+    
     max_scroll = len(text) - screen_height + 4
     scroll_pct = int((scroll / max_scroll) * 100)
     stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 2)
@@ -166,7 +183,12 @@ def handleClick(stdscr, x, y):
 
 
 def handleUserInput(stdscr):
-    global scroll, selected, screen_height, run
+    global scroll, selected, screen_height, run, searchMode
+
+    if searchMode:
+        searchMode = False
+        return
+    
     key = stdscr.getch()
     if key == 10:  # Enter key
         return
@@ -189,13 +211,15 @@ def displayMenu(stdscr):
     
 
 def displayLibrary(stdscr):
-    global text, longest_line, screen_height, run, option
+    global text, longest_line, screen_height, run, option, searchResults, searchMode
     run = True
     text = []
-    for book in books:
+    booksToShow = searchResults if searchResults else books
+
+    for book in booksToShow:
         text.append(f"ID: {book}")
-        for item in books[book]:
-            text.append(f"{item.capitalize()}: {books[book][item]}")
+        for item in booksToShow[book]:
+            text.append(f"{item.capitalize()}: {booksToShow[book][item]}")
         text.append("")
 
     longest_line = len(max(text, key=len))
@@ -215,7 +239,12 @@ def displayLibrary(stdscr):
             if option == 1:
                 addBook(stdscr)
             else:
-                search(books, get_input(stdscr, "Search: "))
+                if not searchResults:
+                    searchResults = search(books, get_input(stdscr, "Search: "))
+                else:
+                    searchResults = {}
+                    searchMode = True
+                    run = False
             option = 0
             curses.curs_set(1)
             displayMenu(stdscr)
