@@ -16,9 +16,8 @@ text = []
 screen_height = 0
 run = True
 option = 0
-searchMode = False
-searchResults = {}
-
+search_mode = False
+search_results = {}
 
 books = {
     1: {"title": "Python for everyone", "author": "John Doe", "quantity": 3},
@@ -51,7 +50,7 @@ def get_input(stdscr, msg, validator="str"):
     return user_input
 
 
-def addBook(stdscr):
+def add_book(stdscr):
     global run
     id = len(books) + 1
     title = get_input(stdscr, "Enter the title: ")
@@ -65,7 +64,7 @@ def addBook(stdscr):
 
 
 def search(books, query):
-    global searchMode, run
+    global search_mode, run
 
     # Normalize the input to lowercase and split into keywords for better matching
     query = query.lower().split()
@@ -88,13 +87,13 @@ def search(books, query):
             results[item] = books[item]
 
     if len(results) > 0:
-        searchMode = True  # Enable search mode to display search results
+        search_mode = True  # Enable search mode to display search results
         run = False  # Exit the current loop to refresh the display with search results
 
     return results
 
 
-def displayBooks(stdscr):
+def display_books(stdscr):
     global selected, text, scroll, longest_line, screen_height
     stdscr.move(0, 0)
     stdscr.addstr("╔" + "═" * longest_line + "╦\n")
@@ -112,7 +111,7 @@ def displayBooks(stdscr):
     stdscr.addstr("╚" + "═" * longest_line + "╩\n")
 
 
-def displayOptionPanel(stdscr):
+def display_option_panel(stdscr):
     options = ["➕ New", "🔎 Search", "❌ Exit"]
     xpos = longest_line + 2
     ypos = 0
@@ -122,14 +121,14 @@ def displayOptionPanel(stdscr):
     for item in options:
         ypos += 1
         stdscr.move(ypos, xpos)
-        if searchResults and ypos == 2:
+        if search_results and ypos == 2:
             item = "📋 All"  # Change option to "All" if search results are displayed
         stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
     stdscr.addstr("╠" + "═" * width + "╣")
 
 
-def displayBookOptions(stdscr):
+def display_book_options(stdscr):
     options = ["➕ Add", "➖ Remove"]
     width = stdscr.getmaxyx()[1] - (longest_line + 5)
     height = stdscr.getmaxyx()[0]
@@ -151,9 +150,9 @@ def displayBookOptions(stdscr):
     stdscr.addstr("╩" + "═" * width + "╝")
 
 
-def placeScrollbar(stdscr):
+def place_scrollbar(stdscr):
     global scroll
-    if searchMode:
+    if search_mode:
         scroll = 0  # Reset scroll if in search mode
         return
     
@@ -163,9 +162,9 @@ def placeScrollbar(stdscr):
     except ZeroDivisionError:
         scroll_pct = 0
     stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 2)
-    
 
-def handleClick(stdscr, x, y):
+    
+def handle_click(stdscr, x, y):
     global selected, option, run, books
     if x <= longest_line:
         selected = math.ceil((y + scroll) / 5)
@@ -176,7 +175,7 @@ def handleClick(stdscr, x, y):
             run = False
 
             try:
-                key = list(searchResults.keys())[selected - 1] if searchResults else selected
+                key = list(search_results.keys())[selected - 1] if search_results else selected
             except IndexError:
                 return
 
@@ -193,31 +192,31 @@ def handleClick(stdscr, x, y):
             sys.exit()
 
 
-def handleOptions(stdscr):
-    global searchResults, searchMode, run, option
+def handle_options(stdscr):
+    global search_results, search_mode, run, option
     if option > 0 and option < 3:
         curses.curs_set(2)
         stdscr.move(0, 0)
         stdscr.clrtobot()
         if option == 1:
-            addBook(stdscr)
+            add_book(stdscr)
         else:
-            if not searchResults:
-                searchResults = search(books, get_input(stdscr, "Search: "))  # Perform search
+            if not search_results:
+                search_results = search(books, get_input(stdscr, "Search: "))  # Perform search
             else:
-                searchResults = {}
-                searchMode = True
+                search_results = {}
+                search_mode = True
                 run = False
         option = 0
         curses.curs_set(1)
-        displayMenu(stdscr)
+        display_menu(stdscr)
 
 
-def handleUserInput(stdscr):
-    global scroll, selected, screen_height, run, searchMode
+def handle_user_input(stdscr):
+    global scroll, selected, screen_height, run, search_mode
 
-    if searchMode:
-        searchMode = False
+    if search_mode:
+        search_mode = False
         selected = 0  # Reset selection if in search mode
         return
     
@@ -231,32 +230,32 @@ def handleUserInput(stdscr):
         elif bstate & curses.BUTTON5_PRESSED:
             scroll += 1 if scroll + screen_height - 4 < len(text) else 0  # Scroll down
         elif curses.BUTTON1_PRESSED:
-            handleClick(stdscr, x, y)
+            handle_click(stdscr, x, y)
     stdscr.clrtobot()
     screen_height = stdscr.getmaxyx()[0]
 
 
-def displayMenu(stdscr):
-    displayBooks(stdscr)
-    displayOptionPanel(stdscr)
-    displayBookOptions(stdscr)
+def display_menu(stdscr):
+    display_books(stdscr)
+    display_option_panel(stdscr)
+    display_book_options(stdscr)
     stdscr.clrtobot()
-    
 
-def displayLibrary(stdscr):
-    global text, longest_line, screen_height, run, option, searchResults, searchMode
+    
+def display_library(stdscr):
+    global text, longest_line, screen_height, run, option, search_results, search_mode
     run = True
     text = []
-    booksToShow = searchResults if searchResults else books
+    books_to_show = search_results if search_results else books
 
     # Display the books
-    for book in booksToShow:
+    for book in books_to_show:
         text.append(f"ID: {book}")
-        for item in booksToShow[book]:
-            text.append(f"{item.capitalize()}: {booksToShow[book][item]}")
+        for item in books_to_show[book]:
+            text.append(f"{item.capitalize()}: {books_to_show[book][item]}")
 
         text.append("")
-        if len(searchResults) == 1:
+        if len(search_results) == 1:
             text.append("")  # Append an extra space to cover up left out space
 
     longest_line = len(max(text, key=len))
@@ -268,7 +267,7 @@ def displayLibrary(stdscr):
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
 
     while run:
-        displayMenu(stdscr)
-        handleOptions(stdscr)
-        placeScrollbar(stdscr)
-        handleUserInput(stdscr)
+        display_menu(stdscr)
+        handle_options(stdscr)
+        place_scrollbar(stdscr)
+        handle_user_input(stdscr)
