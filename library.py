@@ -174,7 +174,11 @@ def handleClick(stdscr, x, y):
     else:
         if selected > 0:
             run = False
-            key = list(searchResults.keys())[selected - 1] if searchResults else selected
+
+            try:
+                key = list(searchResults.keys())[selected - 1] if searchResults else selected
+            except IndexError:
+                return
 
             if y == 5:
                 books[key]["quantity"] += 1
@@ -245,6 +249,7 @@ def displayLibrary(stdscr):
     text = []
     booksToShow = searchResults if searchResults else books
 
+    # Display the books
     for book in booksToShow:
         text.append(f"ID: {book}")
         for item in booksToShow[book]:
