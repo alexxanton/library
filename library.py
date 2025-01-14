@@ -58,24 +58,25 @@ def addBook(stdscr):
     author = get_input(stdscr, "Enter the author: ")
     quantity = get_input(stdscr, "Enter the quantity: ", "int")
     
+    # Update the books dictionary with the new book details
     books.update({id: {"title": title, "author": author, "quantity": int(quantity)}})
     stdscr.refresh()
-    run = False
+    run = False  # Exit the current loop to refresh the display with the new book
 
 
 def search(books, query):
     global searchMode, run
 
-    # Normalize the input
-    query = query.lower().split()  # Split query into keywords
+    # Normalize the input to lowercase and split into keywords for better matching
+    query = query.lower().split()
     results = {}
 
     for item in range(1, len(books), 1):
         string_lower = books[item]["title"].lower()
-        # Check if all query parts are in the book in order
         current_index = 0
         match = True
 
+        # Check if all query parts are in the book title in order
         for word in query:
             current_index = string_lower.find(word, current_index)
             if current_index == -1:  # Word not found
@@ -87,8 +88,8 @@ def search(books, query):
             results[item] = books[item]
 
     if len(results) > 0:
-        searchMode = True
-        run = False
+        searchMode = True  # Enable search mode to display search results
+        run = False  # Exit the current loop to refresh the display with search results
 
     return results
 
@@ -122,7 +123,7 @@ def displayOptionPanel(stdscr):
         ypos += 1
         stdscr.move(ypos, xpos)
         if searchResults and ypos == 2:
-            item = "📋 All"
+            item = "📋 All"  # Change option to "All" if search results are displayed
         stdscr.addstr("║" + item + " " * (width - len(item) - 1) + "║")
     stdscr.move(ypos + 1, xpos)
     stdscr.addstr("╠" + "═" * width + "╣")
@@ -153,13 +154,13 @@ def displayBookOptions(stdscr):
 def placeScrollbar(stdscr):
     global scroll
     if searchMode:
-        scroll = 0
+        scroll = 0  # Reset scroll if in search mode
         return
     
     max_scroll = len(text) - screen_height + 4
     try:
         scroll_pct = int((scroll / max_scroll) * 100)
-    except:
+    except ZeroDivisionError:
         scroll_pct = 0
     stdscr.move(int((screen_height - 5) * scroll_pct / 100) + 1, longest_line + 2)
     
@@ -183,7 +184,7 @@ def handleClick(stdscr, x, y):
                 run = True
 
         if y > 0 and y < 3:
-            option = y
+            option = y  # Set option based on click position
         elif y == 3:
             sys.exit()
 
@@ -198,7 +199,7 @@ def handleOptions(stdscr):
             addBook(stdscr)
         else:
             if not searchResults:
-                searchResults = search(books, get_input(stdscr, "Search: "))
+                searchResults = search(books, get_input(stdscr, "Search: "))  # Perform search
             else:
                 searchResults = {}
                 searchMode = True
@@ -213,7 +214,7 @@ def handleUserInput(stdscr):
 
     if searchMode:
         searchMode = False
-        selected = 0
+        selected = 0  # Reset selection if in search mode
         return
     
     key = stdscr.getch()
@@ -222,9 +223,9 @@ def handleUserInput(stdscr):
     elif key == curses.KEY_MOUSE:
         id, x, y, z, bstate = curses.getmouse()
         if bstate & curses.BUTTON4_PRESSED:
-            scroll -= 1 if scroll > 0 else 0
+            scroll -= 1 if scroll > 0 else 0  # Scroll up
         elif bstate & curses.BUTTON5_PRESSED:
-            scroll += 1 if scroll + screen_height - 4 < len(text) else 0
+            scroll += 1 if scroll + screen_height - 4 < len(text) else 0  # Scroll down
         elif curses.BUTTON1_PRESSED:
             handleClick(stdscr, x, y)
     stdscr.clrtobot()
